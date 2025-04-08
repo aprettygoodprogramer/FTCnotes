@@ -1,4 +1,7 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# What This Project Is
+This program allows teams at FTC competitions to scout out potential alliance partners. 
+
+
 
 # Getting Started
 
