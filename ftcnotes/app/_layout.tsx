@@ -4,7 +4,7 @@ export default function RootLayout() {
   return (
     <Stack 
       screenOptions={{
-        headerShown: false,
+        headerShown: false, // Doesn't show header when switching tabs
       }}
     />
   )
