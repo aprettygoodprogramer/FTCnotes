@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, StyleSheet, Image, TouchableOpacity} from 'react-native'
+import { View, Text, StyleSheet, Image, TouchableOpacity, useColorScheme} from 'react-native'
 import { useRouter } from 'expo-router'; // Import useRouter
 import { Ionicons } from '@expo/vector-icons'; 
 import * as Font from 'expo-font'
@@ -12,16 +12,29 @@ const HomeScreen = () => {
         router.push('/EventsScreen');
     }
 
+    const colorScheme = useColorScheme() // accesses users current system color scheme
+   
+
+    const lightTheme = {  // may change light mode colors later
+      background: '#F3F3F3',
+      textColor: '#000000', 
+    }
+  
+    const darkTheme = {
+      background: '#232323',
+      textColor: '#EFECD7',
+    }
+
+    const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
 
     return (
         
-        <View style={styles.container}>
-        
-        <View style={{ marginBottom: 20 }}>
-            <Ionicons name="add-circle" size={48} color="red" />
-        </View>
+        <View style={[styles.container, {backgroundColor: theme.background}]}>
+            <View style={{ marginBottom: 20 }}>
+                <Ionicons name="add-circle" size={48} color="red" />
+            </View>
             
-            <Text style={styles.text}>FTC Notes</Text>
+            <Text style={[styles.text, {color: theme.textColor}]}>FTC Notes</Text>
             <Image style={styles.image} source={require('../../assets/images/screaming-eagles.png')} />
 
             <TouchableOpacity // button class with more functionality 

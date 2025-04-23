@@ -1,4 +1,4 @@
-  import { StyleSheet, Image, Platform, ScrollView, Text, TouchableOpacity, View, TextInput} from 'react-native';
+  import { StyleSheet, Image, Platform, ScrollView, Text, TouchableOpacity, View, TextInput, useColorScheme} from 'react-native';
   import {useState} from 'react';
   import { useRouter } from 'expo-router'; 
   import { Ionicons } from '@expo/vector-icons'; 
@@ -8,12 +8,31 @@
 
 
   export default function EventsScreen() {
+    const colorScheme = useColorScheme() // accesses users current system color scheme
+   
+
+    const lightTheme = {  // may change light mode colors later
+      background: '#F3F3F3',
+      textColor: '#000000', 
+    }
+  
+    const darkTheme = {
+      background: '#232323',
+      textColor: '#EFECD7',
+    }
+
+    const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+
+
     const router = useRouter();
 
-    const switchPage = () => {
+    const homePage = () => {
       router.push('/');
     }
 
+    const teamsPage = () => {
+      router.push('/TeamsScreen')
+    }
     
 
     const [events, setEvents] = useState<string[]>([]); // Keeps track of event names
@@ -35,11 +54,12 @@
     }
 
     return (
-      <View style={{ flex: 1}}>
+      <View style={{ flex: 1, backgroundColor: theme.background}}>
         <View style={styles.topBar}>
-          <TouchableOpacity activeOpacity={0.3} onPress={switchPage}>
+          <TouchableOpacity activeOpacity={0.3} onPress={homePage}>
           <Image style={styles.homeIcon} source={require('../../assets/images/FTCNotesHomeIcon.png')}/>
           </TouchableOpacity>
+          <Text style={[styles.text, {paddingTop: 20}, {color: theme.textColor}]}>Events</Text>
           <TouchableOpacity activeOpacity={0.3} onPress={eventSetupFunc}>
             <Image style={styles.plusIcon} source={require('../../assets/images/FTCNotesPlusIcon.png')}/>
           </TouchableOpacity>
@@ -50,7 +70,7 @@
             <TouchableOpacity 
               key={index}
               style={styles.button}
-              onPress={switchPage}
+              onPress={teamsPage}
             >
               <Text style={styles.buttonText}>{eventName}</Text>
             </TouchableOpacity>
@@ -58,15 +78,16 @@
         </ScrollView>
         {addEventsText && (
           <View style={styles.centeredTextContainer}>
-            <Text style={styles.text}>Add FTC Events Here!</Text>
+            <Text style={[styles.text, {color: theme.textColor}]}>Add FTC Events Here!</Text>
           </View>
         )}
 
         {showForm && ( // Only displays this when plus button is pressed, setting state to true
-          <View style={styles.formContainer}>
+          <View style={[styles.formContainer, {backgroundColor: theme.background}]}>
             <TextInput 
               placeholder="Enter event name"
-              style={styles.input}
+              placeholderTextColor={theme.textColor}
+              style={[styles.input, {color: theme.textColor}]}
               value={newEventName}
               onChangeText={setNewEventName} // stores text data in the newEventName state 
             />
@@ -115,7 +136,7 @@
     buttonText: {
         color: 'black',
         fontSize: 20, 
-        fontWeight: 'semibold',
+        fontWeight: '600',
         textAlign: 'center'
     },
     
@@ -133,7 +154,6 @@
       bottom: 50,
       left: 20,
       right: 20,
-      backgroundColor: 'white',
       padding: 20,
       borderRadius: 10,
       shadowColor: '#000',
