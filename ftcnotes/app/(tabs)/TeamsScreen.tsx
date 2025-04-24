@@ -23,6 +23,13 @@ export default function TeamsScreen() {
 
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
 
+  const backIcon = colorScheme === 'dark'
+    ? require('../../assets/images/FTCNotesBackIconDark.png')
+    : require('../../assets/images/FTCNotesBackIconLight.png');
+
+  const plusIcon = colorScheme === 'dark'
+    ? require('../../assets/images/FTCNotesPlusIconDark.png')
+    : require('../../assets/images/FTCNotesPlusIconLight.png');
 
 
 
@@ -66,11 +73,11 @@ export default function TeamsScreen() {
     <View style={{ flex: 1, backgroundColor: theme.background}}>
       <View style={styles.topBar}>
         <TouchableOpacity activeOpacity={0.3} onPress={eventsPage}>
-        <Image style={styles.backIcon} source={require('../../assets/images/FTCNotesBackIcon.png')}/>
+        <Image style={styles.backIcon} source={backIcon}/>
         </TouchableOpacity>
         <Text style={[styles.text, {paddingTop: 20}, {color: theme.textColor}]}>Teams</Text>
         <TouchableOpacity activeOpacity={0.3} onPress={eventSetupFunc}>
-          <Image style={styles.plusIcon} source={require('../../assets/images/FTCNotesPlusIcon.png')}/>
+          <Image style={styles.plusIcon} source={plusIcon}/>
         </TouchableOpacity>
       </View>
 

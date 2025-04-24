@@ -23,6 +23,14 @@
 
     const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
 
+    const homeIcon = colorScheme === 'dark'
+      ? require('../../assets/images/FTCNotesHomeIconDark.png')
+      : require('../../assets/images/FTCNotesHomeIconLight.png');
+
+    const plusIcon = colorScheme === 'dark'
+      ? require('../../assets/images/FTCNotesPlusIconDark.png')
+      : require('../../assets/images/FTCNotesPlusIconLight.png');
+ 
 
     const router = useRouter();
 
@@ -57,11 +65,11 @@
       <View style={{ flex: 1, backgroundColor: theme.background}}>
         <View style={styles.topBar}>
           <TouchableOpacity activeOpacity={0.3} onPress={homePage}>
-          <Image style={styles.homeIcon} source={require('../../assets/images/FTCNotesHomeIcon.png')}/>
+          <Image style={styles.homeIcon} source={homeIcon}/>
           </TouchableOpacity>
           <Text style={[styles.text, {paddingTop: 20}, {color: theme.textColor}]}>Events</Text>
           <TouchableOpacity activeOpacity={0.3} onPress={eventSetupFunc}>
-            <Image style={styles.plusIcon} source={require('../../assets/images/FTCNotesPlusIcon.png')}/>
+            <Image style={styles.plusIcon} source={plusIcon}/>
           </TouchableOpacity>
         </View>
 
