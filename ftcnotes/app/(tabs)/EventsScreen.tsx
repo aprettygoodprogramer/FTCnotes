@@ -1,13 +1,42 @@
   import { StyleSheet, Image, Platform, ScrollView, Text, TouchableOpacity, View, TextInput, useColorScheme} from 'react-native';
-  import {useState} from 'react';
+  import {useState, useEffect} from 'react';
   import { useRouter } from 'expo-router'; 
   import { Ionicons } from '@expo/vector-icons'; 
 
 
-
+  
 
 
   export default function EventsScreen() {
+
+    const [addEventsText, setAddEventsText] = useState(true) // Initial text prompt on screen
+
+    // Grabs all Current events in the Database and saves them to the events state. 
+    const fetchEvents = () => {
+      fetch("https://ftcnotesbackend-production.up.railway.app/events") // or your GET endpoint
+          .then(res => {
+              if (!res.ok) {
+                  throw new Error(`Failed to fetch events: ${res.status}`);
+              }
+              return res.json();
+          })
+          .then(data => {
+              setEvents(data); // assumes `data` is an array of event objects
+              
+          })
+          .catch(err => console.error("Error fetching events:", err));
+        
+        
+      };
+      
+      // Calls fetchEvents function upon page load and every time add event button is pressed
+      useEffect(() => {
+        fetchEvents(); 
+        
+      }, []);
+
+      
+    
     const colorScheme = useColorScheme() // accesses users current system color scheme
    
 
@@ -43,17 +72,59 @@
     }
     
 
-    const [events, setEvents] = useState<string[]>([]); // Keeps track of event names
     const [showForm, setShowForm] = useState(false); // toggles form visibility
-    const [newEventName, setNewEventName] = useState(''); // Event user is currently generating
-    const [addEventsText, setAddEventsText] = useState(true) // Initial text prompt on screen
+    // List of event objects grabbed from db that will be rendered on screen
+    const [events, setEvents] = useState<{ name: string; date: string; location: string }[]>([]);
+
+    // Hides or shows starting text
+    useEffect(() => {
+      if (events.length > 0) {
+        setAddEventsText(false);
+      } else {
+        setAddEventsText(true); 
+      }
+    }, [events]); // Triggers whenever events list is updated
+
+    // Event data user is currently generating
+    const [newEventName, setNewEventName] = useState(''); 
+    const [newEventDate, setNewEventDate] = useState('');  
+    const [newEventLocation, setNewEventLocation] = useState(''); 
+
 
     const handleAddEvent = () => {
       if (newEventName.trim().length === 0) return;
-    
-      setEvents([...events, newEventName]); // Adds text to the events list
-      setNewEventName(''); // Clear the input
+
+      
       setShowForm(false);  // Hide the form
+
+      fetch("https://ftcnotesbackend-production.up.railway.app/create-event", {
+        method: "POST",
+        body: JSON.stringify({
+        name: newEventName,
+        date: newEventDate,
+        location: newEventLocation
+        }),
+        headers: {
+          "Content-type": "application/json; charset=UTF-8"
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          console.error("Fetch failed:", response.status, response.statusText);
+        }
+        return response.json();
+        
+      })
+      .then(data => console.log("Success:", data))
+      .catch(error => console.log("Error posting event:", error));
+
+      fetchEvents();
+      
+
+      // Clear the input
+      setNewEventName(''); 
+      setNewEventDate('');
+      setNewEventLocation(''); 
     };
 
     const eventSetupFunc = () => {
@@ -74,13 +145,15 @@
         </View>
 
         <ScrollView contentContainerStyle={styles.container}>
-          {events.map((eventName, index) => (
+          {events.map((event, index) => (
             <TouchableOpacity 
               key={index}
               style={styles.button}
               onPress={teamsPage}
             >
-              <Text style={styles.buttonText}>{eventName}</Text>
+              <Text style={styles.buttonText}>{event.name}</Text>
+              <Text style={styles.buttonText}>{event.date}</Text>
+              <Text style={styles.buttonText}>{event.location}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -98,6 +171,20 @@
               style={[styles.input, {color: theme.textColor}]}
               value={newEventName}
               onChangeText={setNewEventName} // stores text data in the newEventName state 
+            />
+            <TextInput 
+              placeholder="Enter date"
+              placeholderTextColor={theme.textColor}
+              style={[styles.input, {color: theme.textColor}]}
+              value={newEventDate}
+              onChangeText={setNewEventDate} // stores text data in the newEventName state 
+            />
+            <TextInput 
+              placeholder="Enter location"
+              placeholderTextColor={theme.textColor}
+              style={[styles.input, {color: theme.textColor}]}
+              value={newEventLocation}
+              onChangeText={setNewEventLocation} // stores text data in the newEventName state 
             />
             <TouchableOpacity style={styles.addButton} onPress={handleAddEvent}>
               <Text style={styles.buttonText}>Add Event</Text>
