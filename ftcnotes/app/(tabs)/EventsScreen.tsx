@@ -1,5 +1,7 @@
   import { StyleSheet, Image, Platform, ScrollView, Text, TouchableOpacity, View, TextInput, useColorScheme} from 'react-native';
-  import {useState, useEffect} from 'react';
+  import {useState, useEffect, useCallback} from 'react';
+  import { useFocusEffect } from '@react-navigation/native';
+
   import { useRouter } from 'expo-router'; 
   import { Ionicons } from '@expo/vector-icons'; 
 
@@ -22,7 +24,6 @@
           })
           .then(data => {
               setEvents(data); // assumes `data` is an array of event objects
-              
           })
           .catch(err => console.error("Error fetching events:", err));
         
@@ -32,7 +33,6 @@
       // Calls fetchEvents function upon page load and every time add event button is pressed
       useEffect(() => {
         fetchEvents(); 
-        
       }, []);
 
       
@@ -74,7 +74,7 @@
 
     const [showForm, setShowForm] = useState(false); // toggles form visibility
     // List of event objects grabbed from db that will be rendered on screen
-    const [events, setEvents] = useState<{ name: string; date: string; location: string }[]>([]);
+    const [events, setEvents] = useState<{event_id: number; name: string; date: string; location: string }[]>([]);
 
     // Hides or shows starting text
     useEffect(() => {
@@ -109,23 +109,41 @@
         }
       })
       .then(response => {
-        if (!response.ok) {
-          console.error("Fetch failed:", response.status, response.statusText);
-        }
-        return response.json();
-        
+        console.log("Response Status:", response.status); // logs HTTP response code
+        return response.text();   
       })
-      .then(data => console.log("Success:", data))
-      .catch(error => console.log("Error posting event:", error));
-
-      fetchEvents();
-      
+      .then(text => { // 'text' is the return response from previous .then statement
+        if (text.startsWith("Event created")) {
+          console.log("Event created successfully:", text);
+          fetchEvents();  
+        } else {
+          console.error("Unexpected response:", text);
+        }
+      })
+      .catch(error => {
+        console.error("Error posting event:", error);
+      });
 
       // Clear the input
       setNewEventName(''); 
       setNewEventDate('');
       setNewEventLocation(''); 
     };
+
+    const handleDeleteEvent = (eventId: number) => {
+      fetch(`https://ftcnotesbackend-production.up.railway.app/delete-event/${eventId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
+      .then(data => {
+        console.log("Event deleted:", data);
+        fetchEvents(); // refresh list
+      })
+      .catch(err => console.error("Error deleting event:", err));
+    };
+  
 
     const eventSetupFunc = () => {
       setShowForm(true); // shows form to add event
@@ -146,15 +164,23 @@
 
         <ScrollView contentContainerStyle={styles.container}>
           {events.map((event, index) => (
+          <View key={index} style={styles.button}>
+            <TouchableOpacity onPress={() => handleDeleteEvent(event.event_id)} style={styles.deleteButtonWrapper}>
+                <Image source={require('../../assets/images/FTCNotesTrashIcon.png')}  
+                        style={styles.deleteButton}
+                 />
+              </TouchableOpacity>
+
             <TouchableOpacity 
               key={index}
               style={styles.button}
-              onPress={teamsPage}
+              onPress={teamsPage} // onPress={teamsPage}
             >
               <Text style={styles.buttonText}>{event.name}</Text>
               <Text style={styles.buttonText}>{event.date}</Text>
               <Text style={styles.buttonText}>{event.location}</Text>
             </TouchableOpacity>
+          </View>
           ))}
         </ScrollView>
         {addEventsText && (
@@ -221,6 +247,16 @@
       padding: 10,
       marginRight: 10
     },
+    deleteButtonWrapper: {
+      position: 'absolute',
+      top: 10,
+      left: 10,
+      zIndex: 2
+    },
+    deleteButton: {
+      transform: [{ translateX: 15 }, {translateY: 15}],
+      position: 'absolute'
+    },
     text: {
         color: 'black',
         fontSize: 36, 
@@ -236,6 +272,8 @@
     },
     
     button: {
+        alignItems: 'center',
+        justifyContent: 'center',
         backgroundColor: '#f0d41a',
         paddingVertical: 25,
         paddingHorizontal: 50,
