@@ -9,18 +9,13 @@ import {
   TextInput,
   useColorScheme,
 } from "react-native";
-import { useState, useEffect, useCallback } from "react";
-import { useFocusEffect } from "@react-navigation/native";
-
-import { useRouter } from "expo-router";
+import { useState, useEffect } from "react";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
-export default function EventsScreen() {
-  const [addEventsText, setAddEventsText] = useState(true);
-
-  // Grabs all Current events in the Database and saves them to the events state.
-  const fetchEvents = () => {
-    fetch("https://inp.pythonanywhere.com/api/events")
+export default function TeamsScreen() {
+  const fetchTeams = () => {
+    fetch(`https://inp.pythonanywhere.com/api/teams/${id}`) // or your GET endpoint
       .then((res) => {
         if (!res.ok) {
           throw new Error(`Failed to fetch events: ${res.status}`);
@@ -28,18 +23,18 @@ export default function EventsScreen() {
         return res.json();
       })
       .then((data) => {
-        setEvents(data); // assumes `data` is an array of event objects
+        setTeams(data); // assumes `data` is an array of team objects
       })
       .catch((err) => console.error("Error fetching events:", err));
   };
 
-  // Calls fetchEvents function upon page load
   useEffect(() => {
-    fetchEvents();
+    fetchTeams();
   }, []);
 
   const colorScheme = useColorScheme(); // accesses users current system color scheme
-
+  const { id } = useLocalSearchParams(); // unique id depending on what event you clicked on
+  console.log(id);
   const lightTheme = {
     // may change light mode colors later
     background: "#F3F3F3",
@@ -53,58 +48,66 @@ export default function EventsScreen() {
 
   const theme = colorScheme === "dark" ? darkTheme : lightTheme;
 
-  const homeIcon =
+  const backIcon =
     colorScheme === "dark"
-      ? require("../../assets/images/FTCNotesHomeIconDark.png")
-      : require("../../assets/images/FTCNotesHomeIconLight.png");
+      ? require("../../../assets/images/FTCNotesBackIconDark.png")
+      : require("../../../assets/images/FTCNotesBackIconLight.png");
 
   const plusIcon =
     colorScheme === "dark"
-      ? require("../../assets/images/FTCNotesPlusIconDark.png")
-      : require("../../assets/images/FTCNotesPlusIconLight.png");
+      ? require("../../../assets/images/FTCNotesPlusIconDark.png")
+      : require("../../../assets/images/FTCNotesPlusIconLight.png");
 
   const router = useRouter();
 
-  const homePage = () => {
-    router.push("/");
+  const eventsPage = () => {
+    router.push("/EventsScreen");
   };
 
-  const teamsPage = (id: number) => {
-    router.push(`/TeamsScreen/${id}`); // passes unique event id to teamscreen page
+  const infoPage = (id: Number, event_id: Number) => {
+    console.log(id);
+    router.push(`/InfoScreen/${id}/${event_id}`);
   };
 
-  const [showForm, setShowForm] = useState(false); // toggles form visibility
-  // List of event objects grabbed from db that will be rendered on screen
-  const [events, setEvents] = useState<
-    { id: number; name: string; date: string; location: string }[]
+  const [teams, setTeams] = useState<
+    {
+      team_id: number;
+      event_id: number;
+      date_created: string;
+      name: string;
+      number: number;
+    }[]
   >([]);
 
   // Hides or shows starting text
   useEffect(() => {
-    if (events.length > 0) {
-      setAddEventsText(false);
+    if (teams.length > 0) {
+      setAddTeamText(false);
     } else {
-      setAddEventsText(true);
+      setAddTeamText(true);
     }
-  }, [events]); // Triggers whenever events list is updated
+  }, [teams]); // Triggers whenever teams list is updated
 
-  // Event data user is currently generating
-  const [newEventName, setNewEventName] = useState("");
-  const [newEventDate, setNewEventDate] = useState("");
-  const [newEventLocation, setNewEventLocation] = useState("");
+  const [showForm, setShowForm] = useState(false); // toggles form visibility
+  const [addTeamText, setAddTeamText] = useState(true); // Initial text on screen
 
-  const handleAddEvent = () => {
-    if (newEventName.trim().length === 0) return;
+  const [newTeamName, setNewTeamName] = useState(""); // Team name user is currently creating
+  const [newTeamNumber, setNewTeamNumber] = useState(""); // Team number user is creating
+
+  const handleAddTeam = () => {
+    if (newTeamName.trim().length === 0 || newTeamNumber.trim().length === 0)
+      return;
 
     setShowForm(false); // Hide the form
 
-    // Creates new event
-    fetch("https://inp.pythonanywhere.com/api/create-event", {
+    // Creates new team
+    fetch(`https://inp.pythonanywhere.com/api/create-team`, {
       method: "POST",
       body: JSON.stringify({
-        name: newEventName,
-        date: newEventDate,
-        location: newEventLocation,
+        event_id: id,
+        date_created: "2025-06-04", // TODO: Either make this not useless or remove it
+        name: newTeamName,
+        number: newTeamNumber,
       }),
       headers: {
         "Content-type": "application/json; charset=UTF-8",
@@ -118,7 +121,7 @@ export default function EventsScreen() {
         // 'text' is the return response from previous .then statement
         if (text.startsWith("{")) {
           console.log("Event created successfully:", text);
-          fetchEvents();
+          fetchTeams();
         } else {
           console.error("Unexpected response:", text);
         }
@@ -127,14 +130,12 @@ export default function EventsScreen() {
         console.error("Error posting event:", error);
       });
 
-    // Clear the input
-    setNewEventName("");
-    setNewEventDate("");
-    setNewEventLocation("");
+    setNewTeamName(""); // Clear the name input
+    setNewTeamNumber(""); // Clears the number input
   };
 
-  const handleDeleteEvent = (eventId: number) => {
-    fetch(`https://inp.pythonanywhere.com/api/delete-event/${eventId}`, {
+  const handleDeleteTeam = (eventId: number) => {
+    fetch(`https://inp.pythonanywhere.com/api/delete-team/${eventId}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
@@ -142,26 +143,26 @@ export default function EventsScreen() {
     })
       .then((data) => {
         console.log("Event deleted:", data);
-        fetchEvents(); // refresh list
+        fetchTeams(); // refresh list
       })
       .catch((err) => console.error("Error deleting event:", err));
   };
 
   const eventSetupFunc = () => {
     setShowForm(true); // shows form to add event
-    setAddEventsText(false); // hides initial event text
+    setAddTeamText(false); // hides initial event text
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
       <View style={styles.topBar}>
-        <TouchableOpacity activeOpacity={0.3} onPress={homePage}>
-          <Image style={styles.homeIcon} source={homeIcon} />
+        <TouchableOpacity activeOpacity={0.3} onPress={eventsPage}>
+          <Image style={styles.backIcon} source={backIcon} />
         </TouchableOpacity>
         <Text
           style={[styles.text, { paddingTop: 20 }, { color: theme.textColor }]}
         >
-          Events
+          Teams
         </Text>
         <TouchableOpacity activeOpacity={0.3} onPress={eventSetupFunc}>
           <Image style={styles.plusIcon} source={plusIcon} />
@@ -169,14 +170,14 @@ export default function EventsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.container}>
-        {events.map((event, index) => (
-          <View key={index} style={styles.button}>
+        {teams.map((team, index) => (
+          <View key={index} style={{ position: "relative" }}>
             <TouchableOpacity
-              onPress={() => handleDeleteEvent(event.id)}
+              onPress={() => handleDeleteTeam(team.team_id)}
               style={styles.deleteButtonWrapper}
             >
               <Image
-                source={require("../../assets/images/FTCNotesTrashIcon.png")}
+                source={require("../../../assets/images/FTCNotesTrashIcon.png")}
                 style={styles.deleteButton}
               />
             </TouchableOpacity>
@@ -184,19 +185,18 @@ export default function EventsScreen() {
             <TouchableOpacity
               key={index}
               style={styles.button}
-              onPress={() => teamsPage(event.id)} // onPress={teamsPage}
+              onPress={() => infoPage(team.team_id, team.event_id)} // onPress={teamsPage}
             >
-              <Text style={styles.buttonText}>{event.name}</Text>
-              <Text style={styles.buttonText}>{event.date}</Text>
-              <Text style={styles.buttonText}>{event.location}</Text>
+              <Text style={styles.buttonText}>{team.name}</Text>
+              <Text style={styles.buttonText}>{team.number}</Text>
             </TouchableOpacity>
           </View>
         ))}
       </ScrollView>
-      {addEventsText && (
+      {addTeamText && (
         <View style={styles.centeredTextContainer}>
           <Text style={[styles.text, { color: theme.textColor }]}>
-            Add FTC Events Here!
+            Add Teams Here!
           </Text>
         </View>
       )}
@@ -206,28 +206,21 @@ export default function EventsScreen() {
           style={[styles.formContainer, { backgroundColor: theme.background }]}
         >
           <TextInput
-            placeholder="Enter event name"
+            placeholder="Enter team name"
             placeholderTextColor={theme.textColor}
             style={[styles.input, { color: theme.textColor }]}
-            value={newEventName}
-            onChangeText={setNewEventName} // stores text data in the newEventName state
+            value={newTeamName}
+            onChangeText={setNewTeamName} // stores text data in the newEventName state
           />
           <TextInput
-            placeholder="Enter date"
+            placeholder="Enter team number"
             placeholderTextColor={theme.textColor}
             style={[styles.input, { color: theme.textColor }]}
-            value={newEventDate}
-            onChangeText={setNewEventDate} // stores text data in the newEventName state
+            value={newTeamNumber}
+            onChangeText={setNewTeamNumber}
           />
-          <TextInput
-            placeholder="Enter location"
-            placeholderTextColor={theme.textColor}
-            style={[styles.input, { color: theme.textColor }]}
-            value={newEventLocation}
-            onChangeText={setNewEventLocation} // stores text data in the newEventName state
-          />
-          <TouchableOpacity style={styles.addButton} onPress={handleAddEvent}>
-            <Text style={styles.buttonText}>Add Event</Text>
+          <TouchableOpacity style={styles.addButton} onPress={handleAddTeam}>
+            <Text style={styles.buttonText}>Add Team</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -248,10 +241,10 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     alignItems: "center",
   },
-  homeIcon: {
+  backIcon: {
     width: 80,
     height: 80,
-    padding: 10,
+    padding: 8,
     marginLeft: 15,
   },
   plusIcon: {
@@ -260,18 +253,7 @@ const styles = StyleSheet.create({
     padding: 10,
     marginRight: 10,
   },
-  deleteButtonWrapper: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    zIndex: 2,
-  },
-  deleteButton: {
-    transform: [{ translateX: 15 }, { translateY: 15 }],
-    position: "absolute",
-  },
   text: {
-    color: "black",
     fontSize: 36,
     fontWeight: "bold",
     textAlign: "center",
@@ -283,10 +265,17 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
   },
-
+  deleteButtonWrapper: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    zIndex: 2,
+  },
+  deleteButton: {
+    transform: [{ translateX: 15 }, { translateY: 15 }],
+    position: "absolute",
+  },
   button: {
-    alignItems: "center",
-    justifyContent: "center",
     backgroundColor: "#f0d41a",
     paddingVertical: 25,
     paddingHorizontal: 50,
@@ -300,6 +289,7 @@ const styles = StyleSheet.create({
     bottom: 50,
     left: 20,
     right: 20,
+    backgroundColor: "white",
     padding: 20,
     borderRadius: 10,
     shadowColor: "#000",
