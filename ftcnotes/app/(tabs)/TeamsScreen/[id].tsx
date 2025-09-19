@@ -12,28 +12,12 @@ import {
 import { useState, useEffect } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import BlurTabBarBackground from "@/components/ui/TabBarBackground.ios";
 
 export default function TeamsScreen() {
-  const fetchTeams = () => {
-    fetch(`https://inp.pythonanywhere.com/api/teams/${id}`) // or your GET endpoint
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Failed to fetch events: ${res.status}`);
-        }
-        return res.json();
-      })
-      .then((data) => {
-        setTeams(data); // assumes `data` is an array of team objects
-      })
-      .catch((err) => console.error("Error fetching events:", err));
-  };
-
-  useEffect(() => {
-    fetchTeams();
-  }, []);
+  const { id } = useLocalSearchParams(); // unique id depending on what event you clicked on
 
   const colorScheme = useColorScheme(); // accesses users current system color scheme
-  const { id } = useLocalSearchParams(); // unique id depending on what event you clicked on
   console.log(id);
   const lightTheme = {
     // may change light mode colors later
@@ -78,6 +62,53 @@ export default function TeamsScreen() {
       number: number;
     }[]
   >([]);
+
+  const [event, setEvent] = useState<{
+    id: number;
+    date: string;
+    location: string;
+    name: string;
+  } | null>(null);
+
+  const fetchTeams = () => {
+    fetch(`https://inp.pythonanywhere.com/api/teams/${id}`) // or your GET endpoint
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`Failed to fetch events: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        setTeams(data); // assumes `data` is an array of team objects
+      })
+      .catch((err) => console.error("Error fetching events:", err));
+  };
+
+  // gets event to display in topbar
+  const getEvent = () => {
+    fetch(`https://inp.pythonanywhere.com/api/events/${id}`) // or your GET endpoint
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`Failed to fetch events: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        setEvent(data);
+      })
+      .catch((err) => console.error("Error fetching events:", err));
+  };
+
+  useEffect(() => {
+    fetchTeams();
+    getEvent();
+  }, []);
+
+  useEffect(() => {
+    if (event) {
+      console.log("Event updated:", event);
+    }
+  }, [event]);
 
   // Hides or shows starting text
   useEffect(() => {
@@ -156,39 +187,83 @@ export default function TeamsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
       <View style={styles.topBar}>
-        <TouchableOpacity activeOpacity={0.3} onPress={eventsPage}>
-          <Image style={styles.backIcon} source={backIcon} />
-        </TouchableOpacity>
-        <Text
-          style={[styles.text, { paddingTop: 20 }, { color: theme.textColor }]}
+        <View
+          style={{
+            display: "flex",
+            flexDirection: "row",
+          }}
         >
-          Teams
-        </Text>
+          <TouchableOpacity activeOpacity={0.3} onPress={eventsPage}>
+            <Image style={styles.backIcon} source={backIcon} />
+          </TouchableOpacity>
+          <Text
+            style={[
+              styles.text,
+              { paddingTop: 20 },
+              { color: theme.textColor },
+            ]}
+          >
+            Teams
+          </Text>
+        </View>
+
         <TouchableOpacity activeOpacity={0.3} onPress={eventSetupFunc}>
           <Image style={styles.plusIcon} source={plusIcon} />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.headerText}>{event?.name}</Text>
+        <Text style={styles.headerSubText}>
+          {event?.date} • {event?.location}
+        </Text>
+
+        <View style={styles.line}></View>
         {teams.map((team, index) => (
           <View key={index} style={{ position: "relative" }}>
-            <TouchableOpacity
-              onPress={() => handleDeleteTeam(team.team_id)}
-              style={styles.deleteButtonWrapper}
-            >
-              <Image
-                source={require("../../../assets/images/FTCNotesTrashIcon.png")}
-                style={styles.deleteButton}
-              />
-            </TouchableOpacity>
+            <View style={styles.actionRow}>
+              <View style={styles.rankWrapper}>
+                <Text style={{ color: "white" }}>#1</Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => handleDeleteTeam(team.team_id)}
+                style={styles.deleteButtonWrapper}
+              >
+                <Image
+                  source={require("../../../assets/images/TrashIconWhite.png")}
+                  style={styles.deleteButton}
+                />
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
               key={index}
-              style={styles.button}
+              style={[
+                styles.button,
+                { borderWidth: colorScheme === "light" ? 1 : 0 },
+              ]}
               onPress={() => infoPage(team.team_id, team.event_id)} // onPress={teamsPage}
             >
-              <Text style={styles.buttonText}>{team.name}</Text>
-              <Text style={styles.buttonText}>{team.number}</Text>
+              <Text style={styles.TeamNameText}>{team.name}</Text>
+              <Text style={[styles.buttonText, { marginBottom: 10 }]}>
+                Team #{team.number}
+              </Text>
+
+              <View
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <Image
+                  source={require("../../../assets/images/avgIcon3.png")}
+                  style={styles.avgButton}
+                />
+                <Text style={{ fontWeight: "600" }}>Avg: 70 points</Text>
+              </View>
             </TouchableOpacity>
           </View>
         ))}
@@ -241,48 +316,124 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     alignItems: "center",
   },
+  actionRow: {
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "absolute",
+    gap: 10,
+    top: 20,
+    right: 20,
+    zIndex: 2,
+  },
+  line: {
+    height: 3,
+    width: 360,
+    borderRadius: 99,
+    backgroundColor: "lightgrey",
+    marginTop: 10,
+    marginBottom: 10,
+  },
   backIcon: {
-    width: 80,
-    height: 80,
+    width: 60,
+    height: 60,
     padding: 8,
     marginLeft: 15,
+    marginTop: 11,
   },
   plusIcon: {
-    width: 80,
-    height: 80,
+    width: 60,
+    height: 60,
     padding: 10,
-    marginRight: 10,
+    marginRight: 20,
+    marginTop: 11,
   },
   text: {
     fontSize: 36,
     fontWeight: "bold",
     textAlign: "center",
   },
-
-  buttonText: {
+  TeamNameText: {
     color: "black",
     fontSize: 20,
-    fontWeight: "600",
-    textAlign: "center",
+    fontWeight: "700",
+    marginBottom: 5,
+  },
+  headerText: {
+    fontWeight: "700",
+    marginBottom: 5,
+    fontSize: 22,
+    color: "#cfa323",
+  },
+  headerSubText: {
+    fontWeight: "500",
+    fontSize: 16,
+    color: "#474747",
+  },
+  buttonText: {
+    color: "#242424",
+    fontSize: 17,
+    fontWeight: "500",
   },
   deleteButtonWrapper: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    zIndex: 2,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgb(227, 45, 45)",
+    paddingTop: 14,
+    paddingBottom: 14,
+    paddingLeft: 20,
+    paddingRight: 20,
+    borderRadius: 20,
   },
   deleteButton: {
-    transform: [{ translateX: 15 }, { translateY: 15 }],
     position: "absolute",
+    width: 16.5,
+    height: 16.5,
+  },
+  rankWrapper: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 2,
+    paddingTop: 5,
+    paddingBottom: 5,
+    paddingLeft: 11,
+    paddingRight: 11,
+    borderRadius: 99,
+    backgroundColor: "black",
+  },
+  avgButton: {
+    width: 20,
+    height: 20,
   },
   button: {
-    backgroundColor: "#f0d41a",
-    paddingVertical: 25,
-    paddingHorizontal: 50,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
     width: 380,
-    height: 100,
     borderRadius: 10,
-    margin: 4,
+    margin: 8,
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "flex-start",
+    backgroundColor: "rgb(250,200,0)",
+    borderColor: "#dea300",
+    borderStyle: "solid",
+  },
+  teamHeader: {
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    width: 380,
+    borderRadius: 10,
+    marginBottom: 10,
+    marginTop: 8,
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "flex-start",
+    backgroundColor: "#e8e6e6",
+    borderColor: "#969696",
+    borderStyle: "solid",
   },
   formContainer: {
     position: "absolute",
@@ -299,7 +450,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   addButton: {
-    backgroundColor: "#f0d41a",
+    backgroundColor: "rgb(250,200,0)",
     padding: 15,
     borderRadius: 5,
     alignItems: "center",

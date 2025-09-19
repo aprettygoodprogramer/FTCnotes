@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   },
 
   button: {
-    backgroundColor: "#f0d41a",
+    backgroundColor: "#FACC15",
     paddingVertical: 25,
     paddingHorizontal: 50,
     width: 380,
