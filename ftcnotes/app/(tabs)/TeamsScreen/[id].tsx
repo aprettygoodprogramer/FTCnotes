@@ -26,7 +26,7 @@ export default function TeamsScreen() {
   };
 
   const darkTheme = {
-    background: "#232323",
+    background: "#111827",
     textColor: "#EFECD7",
   };
 
@@ -60,6 +60,8 @@ export default function TeamsScreen() {
       date_created: string;
       name: string;
       number: number;
+      totalScores: number;
+      rank: number;
     }[]
   >([]);
 
@@ -80,8 +82,73 @@ export default function TeamsScreen() {
       })
       .then((data) => {
         setTeams(data); // assumes `data` is an array of team objects
+
+        return Promise.all(
+          data.map((team: { team_id: number }) =>
+            fetch(`https://inp.pythonanywhere.com/api/info/${team.team_id}`)
+              .then((res) => {
+                if (!res.ok) {
+                  throw new Error(`Failed to fetch scores ${res.status}`);
+                }
+                return res.json();
+              })
+              .then((scoreData) => {
+                // if scores havent been entered yet, array containing
+                // all scores is set to all zeros.
+                const s = scoreData[0] || {
+                  auto_score: 0,
+                  teleop_score: 0,
+                  endgame_score: 0,
+                };
+                const totalScores =
+                  Number(s.auto_score) +
+                  Number(s.teleop_score) +
+                  Number(s.endgame_score);
+
+                return {
+                  ...team,
+                  totalScores,
+                };
+              })
+          )
+        );
       })
-      .catch((err) => console.error("Error fetching events:", err));
+      .then((teamsWithScores) => {
+        // teamsWithScores is an array of all teams that contain totalScores values
+        const sortedTeams = teamsWithScores.sort(
+          // sort syntax in js, look up if you forget
+          (team1, team2) => team2.totalScores - team1.totalScores
+        );
+
+        const rankedTeams = sortedTeams.map((team, index) => ({
+          ...team,
+          rank: index + 1,
+        }));
+
+        setTeams(rankedTeams);
+      })
+      .catch((err) => console.error("Error fetching teams/scores:", err));
+  };
+
+  const getTeamScores = async () => {
+    try {
+      const updatedTeams = await Promise.all(
+        teams.map(async (team) => {
+          const res = await fetch(
+            `https://inp.pythonanywhere.com/api/info/${team.team_id}`
+          );
+          if (!res.ok)
+            throw new Error(`Failed to fetch team scores: ${res.status}`);
+          const data = await res.json();
+          const totalScores =
+            data.auto_score + data.teleop_score + data.endgame_score;
+          return { ...team, totalScores };
+        })
+      );
+      setTeams(updatedTeams);
+    } catch (error) {
+      console.error("Error fetching team scores:", error);
+    }
   };
 
   // gets event to display in topbar
@@ -100,8 +167,13 @@ export default function TeamsScreen() {
   };
 
   useEffect(() => {
-    fetchTeams();
     getEvent();
+
+    const fetchTeamsAndScores = async () => {
+      await fetchTeams();
+      getTeamScores(); // runs only after fetchTeams() finishes
+    };
+    fetchTeamsAndScores();
   }, []);
 
   useEffect(() => {
@@ -214,7 +286,12 @@ export default function TeamsScreen() {
 
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.headerText}>{event?.name}</Text>
-        <Text style={styles.headerSubText}>
+        <Text
+          style={[
+            styles.headerSubText,
+            { color: colorScheme === "dark" ? "#ffffff" : "#474747" },
+          ]}
+        >
           {event?.date} • {event?.location}
         </Text>
 
@@ -223,7 +300,7 @@ export default function TeamsScreen() {
           <View key={index} style={{ position: "relative" }}>
             <View style={styles.actionRow}>
               <View style={styles.rankWrapper}>
-                <Text style={{ color: "white" }}>#1</Text>
+                <Text style={{ color: "white" }}>#{team?.rank}</Text>
               </View>
 
               <TouchableOpacity
@@ -262,7 +339,9 @@ export default function TeamsScreen() {
                   source={require("../../../assets/images/avgIcon3.png")}
                   style={styles.avgButton}
                 />
-                <Text style={{ fontWeight: "600" }}>Avg: 70 points</Text>
+                <Text style={{ fontWeight: "600", fontSize: 15 }}>
+                  Avg: {team?.totalScores} pts
+                </Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -369,7 +448,6 @@ const styles = StyleSheet.create({
   headerSubText: {
     fontWeight: "500",
     fontSize: 16,
-    color: "#474747",
   },
   buttonText: {
     color: "#242424",
